@@ -1,36 +1,17 @@
 (function() {
   'use strict';
 
-  // This config stores the important strings needed to
-  // connect to the foursquare API and OAuth service
-  //
-  // Storing these here is insecure for a public app
-  // See part II. of this tutorial for an example of how
-  // to do a server-side OAuth flow and avoid this problem
-  var config = {
-      clientId: 'thho5qsMKvSBhnZfc7OgHpmfQohT3EYpjNsnFvLs',
-  };
-
   // Called when web page first loads and when
   // the OAuth flow returns to the page
   //
   // This function parses the access token in the URI if available
   // It also adds a link to the foursquare connect button
   $(document).ready(function() {
-      var accessToken = parseAccessToken();
-      var hasAuth = accessToken && accessToken.length > 0;
-      updateUIWithAuthState(hasAuth);
-      if(hasAuth){
-        Cookies.set("accessToken", accessToken);
-       }
-
-      $("#connectbutton").click(function() {
-          doAuthRedirect();
-      });
 
       $("#getdatabutton").click(function() {
           var formid = $('input[name=formid]')[0].value.trim();
           tableau.connectionName = "OnaData Connector";
+          var accessToken = $('input[name=apitoken]')[0].value.trim();
 
           var http = location.protocol;
           var slashes = http.concat("//");
@@ -38,61 +19,11 @@
           var host = host + (location.port ? ':'+location.port: '');
           var jsonUrl = host + "/api/v1/data/" + formid +".json?sort={\"_id\":1}"
           var conData = {"jsonUrl": jsonUrl};
+          tableau.password = accessToken;
           tableau.connectionData = JSON.stringify(conData);
           tableau.submit();
       });
   });
-
-  // An on-click funcion for the connect to foursquare button,
-  // This will redirect the user to a foursquare login
-  function doAuthRedirect() {
-      console.log(config);
-      var clientId = $('input[name=clientid]')[0].value.trim();
-
-      // update config map
-      if(clientId && clientId.length > 0){
-        config['clientId'] = clientId
-      }
-      var appId = config.clientId;
-      if (tableau.authPurpose === tableau.authPurposeEnum.ephemerel) {
-        appId = config.clientId;
-      } else if (tableau.authPurpose === tableau.authPurposeEnum.enduring) {
-        appId = config.clientId; // This should be the Tableau Server appID
-      }
-
-      var http = location.protocol;
-      var slashes = http.concat("//");
-      var host = slashes.concat(window.location.hostname);
-      var host = host + (location.port ? ':'+location.port: '');
-      var redirect_uri = host + "/connector"
-      var url = host + '/o/authorize?response_type=token&client_id=' + appId +
-              '&redirect_uri=' + redirect_uri;
-      window.location.href = url;
-  }
-
-  function parseAccessToken() {
-    var query = window.location.hash.substring(1);
-    var vars = query.split("&");
-    var ii;
-    for (ii = 0; ii < vars.length; ++ii) {
-       var pair = vars[ii].split("=");
-       if (pair[0] == "access_token") { return pair[1]; }
-    }
-    return(false);
-   }
-
-
-  // This function togglels the label shown depending
-  // on whether or not the user has been authenticated
-  function updateUIWithAuthState(hasAuth) {
-      if (hasAuth) {
-          $(".notsignedin").css('display', 'none');
-          $(".signedin").css('display', 'block');
-      } else {
-          $(".notsignedin").css('display', 'block');
-          $(".signedin").css('display', 'none');
-      }
-  }
   
   // Takes a hierarchical javascript object and tries to turn it into a table
   // Returns an object with headers and the row level data
@@ -202,7 +133,7 @@
   // Init function for connector, called during every phase but
   // only called when running inside the simulator or tableau
   myConnector.init = function(initCallback) {
-      tableau.authType = tableau.authTypeEnum.custom;
+      tableau.authType = tableau.authTypeEnum.basic;
 
       // If we are in the auth phase we only want to show the UI needed for auth
       if (tableau.phase == tableau.phaseEnum.authPhase) {
