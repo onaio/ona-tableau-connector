@@ -147,11 +147,6 @@
         // is invalid.
       }
 
-      var accessToken = Cookies.get("accessToken");
-      console.log("Access token is '" + accessToken + "'");
-      var hasAuth = (accessToken && accessToken.length > 0) || tableau.password.length > 0;
-      updateUIWithAuthState(hasAuth);
-
       initCallback();
 
       // If we are not in the data gathering phase, we want to store the token
