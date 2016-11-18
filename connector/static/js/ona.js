@@ -319,7 +319,7 @@
           success: function (data) {
               var table_meta = _jsToTable(data);
 
-              f (table_meta.rowData && !isEmpty(table_meta.headers)) {
+              if (table_meta.rowData && !isEmpty(table_meta.headers)) {
                   var data_list = []
                   table_meta.rowData.forEach(function(data_map){
                       var new_data_map = {}
