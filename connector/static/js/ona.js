@@ -319,8 +319,18 @@
           success: function (data) {
               var table_meta = _jsToTable(data);
 
-              if (table_meta.rowData && !isEmpty(table_meta.headers)) {
-                  table.appendRows(table_meta.rowData);
+              f (table_meta.rowData && !isEmpty(table_meta.headers)) {
+                  var data_list = []
+                  table_meta.rowData.forEach(function(data_map){
+                      var new_data_map = {}
+                      Object.keys(data_map).forEach(function(key) {
+                      var old_key = key
+                      var newkey = key.replace(/\//g , "_");
+                      new_data_map[newkey] = data_map[old_key];
+                   });
+                    data_list.push(new_data_map)
+                  });
+                  table.appendRows(data_list);
                   doneCallback();
               }
           },
