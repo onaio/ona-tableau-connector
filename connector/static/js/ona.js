@@ -1,14 +1,8 @@
 (function() {
   'use strict';
 
-  // This config stores the important strings needed to
-  // connect to the foursquare API and OAuth service
-  //
-  // Storing these here is insecure for a public app
-  // See part II. of this tutorial for an example of how
-  // to do a server-side OAuth flow and avoid this problem
   var config = {
-      clientId: 'thho5qsMKvSBhnZfc7OgHpmfQohT3EYpjNsnFvLs',
+      clientId: '',
   };
 
   // Called when web page first loads and when
@@ -25,12 +19,14 @@
        }
 
       $("#connectbutton").click(function() {
-          doAuthRedirect();
+         // doAuthRedirect();
       });
 
       $("#getdatabutton").click(function() {
           var formid = $('input[name=formid]')[0].value.trim();
           tableau.connectionName = "OnaData Connector";
+          var accessToken = $('input[name=apitoken]')[0].value.trim();
+          Cookies.set("accessToken", accessToken);
 
           var http = location.protocol;
           var slashes = http.concat("//");
@@ -38,15 +34,14 @@
           var host = host + (location.port ? ':'+location.port: '');
           var jsonUrl = host + "/api/v1/data/" + formid +".json?sort={\"_id\":1}"
           var conData = {"jsonUrl": jsonUrl};
+          tableau.password = accessToken;
           tableau.connectionData = JSON.stringify(conData);
           tableau.submit();
       });
   });
 
-  // An on-click funcion for the connect to foursquare button,
   // This will redirect the user to a foursquare login
   function doAuthRedirect() {
-      console.log(config);
       var clientId = $('input[name=clientid]')[0].value.trim();
 
       // update config map
@@ -202,8 +197,8 @@
   // Init function for connector, called during every phase but
   // only called when running inside the simulator or tableau
   myConnector.init = function(initCallback) {
-      tableau.authType = tableau.authTypeEnum.custom;
-
+      tableau.authType = tableau.authTypeEnum.basic;
+//
       // If we are in the auth phase we only want to show the UI needed for auth
       if (tableau.phase == tableau.phaseEnum.authPhase) {
         $("#getdatabutton").css('display', 'none');
@@ -220,11 +215,11 @@
       console.log("Access token is '" + accessToken + "'");
       var hasAuth = (accessToken && accessToken.length > 0) || tableau.password.length > 0;
       updateUIWithAuthState(hasAuth);
-
+//
       initCallback();
-
-      // If we are not in the data gathering phase, we want to store the token
-      // This allows us to access the token in the data gathering phase
+//
+//      // If we are not in the data gathering phase, we want to store the token
+//      // This allows us to access the token in the data gathering phase
       if (tableau.phase == tableau.phaseEnum.interactivePhase || tableau.phase == tableau.phaseEnum.authPhase) {
           if (hasAuth) {
               tableau.password = accessToken;
@@ -248,7 +243,7 @@
       var xhr = $.ajax({
           url: url,
           headers: {
-            "Authorization": "Bearer " + tableau.password
+            "Authorization": "Token " + tableau.password
           },
           dataType: 'json',
           success: function (data) {
@@ -310,14 +305,24 @@
       var xhr = $.ajax({
           url: connectionUri,
           headers: {
-            "Authorization": "Bearer " + tableau.password
+            "Authorization": "Token " + tableau.password
           },
           dataType: 'json',
           success: function (data) {
               var table_meta = _jsToTable(data);
 
               if (table_meta.rowData && !isEmpty(table_meta.headers)) {
-                  table.appendRows(table_meta.rowData);
+                  var data_list = []
+                  table_meta.rowData.forEach(function(data_map){
+                      var new_data_map = {}
+                      Object.keys(data_map).forEach(function(key) {
+                      var old_key = key
+                      var newkey = key.replace(/\//g , "_");
+                      new_data_map[newkey] = data_map[old_key];
+                   });
+                    data_list.push(new_data_map)
+                  });
+                  table.appendRows(data_list);
                   doneCallback();
               }
           },
