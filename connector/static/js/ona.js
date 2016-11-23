@@ -1,14 +1,8 @@
 (function() {
   'use strict';
 
-  // This config stores the important strings needed to
-  // connect to the foursquare API and OAuth service
-  //
-  // Storing these here is insecure for a public app
-  // See part II. of this tutorial for an example of how
-  // to do a server-side OAuth flow and avoid this problem
   var config = {
-      clientId: 'thho5qsMKvSBhnZfc7OgHpmfQohT3EYpjNsnFvLs',
+      clientId: '',
   };
 
   // Called when web page first loads and when
@@ -46,10 +40,8 @@
       });
   });
 
-  // An on-click funcion for the connect to foursquare button,
   // This will redirect the user to a foursquare login
   function doAuthRedirect() {
-      console.log(config);
       var clientId = $('input[name=clientid]')[0].value.trim();
 
       // update config map
