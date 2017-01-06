@@ -23,7 +23,8 @@
       });
 
       $("#getdatabutton").click(function() {
-          var formid = $('input[name=formid]')[0].value.trim();
+          // var formid = $('input[name=formid]')[0].value.trim();
+          var formid = $( "#formid" ).val();
           tableau.connectionName = "OnaData Connector";
           var accessToken = $('input[name=apitoken]')[0].value.trim();
           Cookies.set("accessToken", accessToken);
@@ -38,6 +39,43 @@
           tableau.connectionData = JSON.stringify(conData);
           tableau.submit();
       });
+
+      //Fetch forms and populate the form select input
+      $( "#apitoken" ).blur(function() {
+          var accessToken = $('input[name=apitoken]')[0].value.trim();
+
+          if (accessToken){
+              var http = location.protocol;
+              var slashes = http.concat("//");
+              var host = slashes.concat(window.location.hostname);
+              var host = host + (location.port ? ':'+location.port: '');
+              var url = host + "/api/v1/forms"
+              // fetch forms
+              var xhr = $.ajax({
+              url: url,
+              headers: {
+                "Authorization": "Token " + accessToken
+              },
+              dataType: 'json',
+              beforeSend: function(b){
+                $("#loading").show();
+              },
+              success: function (data) {
+                  $("#loading").hide();
+
+                  var options = $("#formid").empty();
+                  $.each(data, function(index, value) {
+                      options.append($("<option></option>")
+                        .attr("value", value.formid).text(value.title));
+                  });
+              },
+              error: function (xhr, ajaxOptions, thrownError) {
+                  alert( "Invalid API token" );
+              }
+              });
+           }
+
+        });
   });
 
   // This will redirect the user to a foursquare login
