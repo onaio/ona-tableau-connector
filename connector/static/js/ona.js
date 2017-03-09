@@ -34,7 +34,8 @@
           var host = slashes.concat(window.location.hostname);
           var host = host + (location.port ? ':'+location.port: '');
           var jsonUrl = host + "/api/v1/data/" + formid +".json?sort={\"_id\":1}"
-          var conData = {"jsonUrl": jsonUrl};
+          var formUrl = host + "/api/v1/forms/" + formid + "/form"
+          var conData = {"jsonUrl": jsonUrl, "formUrl": formUrl};
           tableau.password = accessToken;
           tableau.connectionData = JSON.stringify(conData);
           tableau.submit();
@@ -126,7 +127,7 @@
           $(".signedin").css('display', 'none');
       }
   }
-  
+
   // Takes a hierarchical javascript object and tries to turn it into a table
   // Returns an object with headers and the row level data
   function _jsToTable(objectBlob) {
@@ -228,6 +229,88 @@
     return true;
   }
 
+  function getTableauType(xform_type) {
+    var tableau_types = {
+      'integer': 'int',
+      'decimal': 'float',
+      'dateTime': 'datetime',
+      'text': 'string'
+    }
+    if (tableau_types[xform_type] === null || tableau_types[xform_type] === undefined) {
+      return 'string';
+    }
+
+    return tableau_types[xform_type];
+  }
+
+
+  function flattener(children, parent) {
+
+    var s = []
+    for (var b = 0; b < children.length; b++) {
+      var a = children[b];
+      var _name = a['name'];
+      if (parent !== null && parent !== undefined) {
+        _name = parent + "_" + a['name'];
+      }
+      if (a['type'] !== 'group') {
+        s.push({
+          'id': _name,
+          'dataType':  getTableauType(a['type']),
+          'alias': a['name']
+        });
+      }
+      if (a['children'] && ['select one', 'select multiple'].indexOf(a['type']) < 0) {
+        flattener(a['children'], a['name']);
+      }
+    }
+
+    return s
+  }
+
+  function add_meta_cols(cols){
+    /**
+    {
+        "_notes": [],
+        "_bamboo_dataset_id": "",
+        "_tags": [],
+        "_xform_id_string": "tutorial",
+        "meta/instanceID": "uuid:5a28d476-976b-4488-898f-3967e19f425e",
+        "_duration": 22,
+        "_geolocation"
+        "_edited": false,
+        "_status": "submitted_via_web",
+        "_uuid": "5a28d476-976b-4488-898f-3967e19f425e",
+        "_submitted_by": null,
+        "formhub/uuid": "f0887d8ba88742919977f4904f0e2e59",
+        "_version": "201506090817",
+        "_attachments": [],
+        "_submission_time": "2016-08-09T09:22:31",
+        "_id": 3638940
+    }
+    **/
+    var meta_cols = ['_id', '_submission_time', '_attachments', '_version',
+    '_submitted_by', '_uuid', '_status', '_edited', '_geolocation',
+     '_duration', '_xform_id_string', '_tags', '_notes']
+
+     meta_cols.forEach(function (col) {
+          var dataType = 'string'
+
+        if(col == '_id' || col == '_duration'){
+            dataType = 'int'
+        }else if(col == '_submission_time'){
+            dataType = 'datetime'
+        }
+        cols.push({
+            'id': col,
+            'dataType': dataType,
+            'alias': col
+         })
+      })
+
+     return cols
+  }
+
   //------------- Tableau WDC code -------------//
   // Create tableau connector, should be called first
   var myConnector = tableau.makeConnector();
@@ -275,8 +358,8 @@
   // Declare the data to Tableau that we are returning from Foursquare
   myConnector.getSchema = function(schemaCallback) {
       var conData = JSON.parse(tableau.connectionData);
-      // Get the 1st record to get the headers
-      var url = conData.jsonUrl + "&limit=1";
+      // Get form definition
+      var url = conData.formUrl
 
       var xhr = $.ajax({
           url: url,
@@ -285,34 +368,25 @@
           },
           dataType: 'json',
           success: function (data) {
-              var table_meta = _jsToTable(data);
-              if (table_meta.headers) {
-                  var cols = [];
-                  var schema = [];
-                  var headers = table_meta.headers;
 
-                  for (var fieldName in headers) {
-                    if (headers.hasOwnProperty(fieldName)) {
-                      cols.push({ id: fieldName.replace(/\//g , "_"),
-                       dataType: headers[fieldName]});
-                    }
-                  }
+             var schema = [];
+             var title = data['title']
+             var name = data['name']
+             var children = data['children'];
+             var cols = flattener(children);
 
-                  
-                  var tableInfo = {
-                    id: "OnadataTable",
-                    alias: "Onadata Connector",
-                    incrementColumnId: "_id",
-                    columns: cols
-                  }
+             cols = add_meta_cols(cols)
 
-                  schema.push(tableInfo);
+             var tableInfo = {
+               id: name,
+               alias: title,
+               incrementColumnId: "_id",
+               columns: cols
+             }
 
-                  schemaCallback(schema);
-              }
-              else {
-                  tableau.abortWithError("No results found");
-              }
+             schema.push(tableInfo);
+
+             schemaCallback(schema);
           },
           error: function (xhr, ajaxOptions, thrownError) {
               // WDC should do more granular error checking here
