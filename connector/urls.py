@@ -1,7 +1,7 @@
-from django.conf.urls import url
+from django.urls import re_path
 
 from connector.views import onadata_connector
 
 urlpatterns = [
-    url(r'^tableau/connector/$', onadata_connector, name='connector'),
+    re_path(r"^tableau/connector/$", onadata_connector, name="connector"),
 ]
